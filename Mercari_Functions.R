@@ -75,3 +75,72 @@ get_nway_interaction <- function(train, y_name,category_vector,test=NULL,
   return
 } # end of get_nway_interaction
 
+# get text feature
+get_text_feature <- function(train, test=NULL,
+                             trainOrApply = 'T', folds, 
+                             eliminateOrigColumns=FALSE) {
+  
+  no_rows <- nrow(train)
+  
+  # Set names of columns
+  if (trainOrApply=='T') no_folds=length(names(folds))
+  if (trainOrApply=='A') no_folds=1
+  
+  # Go through all folds
+  for (f in 1:no_folds) {
+    
+    print(paste0("We are inside get_text_feature and at fold number :",f))
+    if (trainOrApply=='T') {
+      idx_train <- setdiff(1:nrow(train),folds[[f]])
+      idx_out_of_sample <- folds[[f]]
+    } else {
+      idx_train <- 1:nrow(train)
+    }
+    
+    name_words <- train[idx_train,c("id","name","price"),with=FALSE] %>% 
+      unnest_tokens(word,name) #%>%  count(word,sort=TRUE) %>% ungroup()
+    name_words_out_of_sample <- train[idx_out_of_sample,c("id","name","price"),with=FALSE] %>%
+      unnest_tokens(word,name)
+    words_agg <- name_words[,j=list(mean_price=mean(price,na.rm=TRUE),
+                                    Count=length(price)),by=c("word")]
+    setkeyv(name_words_out_of_sample,"word")
+    setkeyv(words_agg,"word")
+    
+    if (trainOrApply=='T')  {
+      name_words_out_of_sample <- words_agg[name_words_out_of_sample,list(id,word,mean_price,Count)]
+      name_words_out_of_sample$weight <- exp(name_words_out_of_sample$Count * -0.0001)
+      name_words_out_of_sample$weight <- ifelse(name_words_out_of_sample$Count < 10, 0, name_words_out_of_sample$weight)
+      name_words_agg <- name_words_out_of_sample[,j=list(weighted_avg_price=weighted.mean(mean_price,weight,na.rm=TRUE)),
+                                                         by=c("id")]
+
+      no_rows <- nrow(train[idx_train])
+      # Formula to merge word mean prices
+      setkeyv(name_words_agg,"id")
+      train[idx_out_of_sample,c("weighted_avg_word_price")] <- name_words_agg[train[idx_out_of_sample,"id",with=FALSE], 
+                                                                    list(weighted_avg_price)]
+    } else {
+      #test[,colMeanResponseName] <- n_Way_Results[test[,category_vector,with=FALSE], list(Mean.Response)]
+    }
+    
+  } # end of For Loop with Folds
+  
+  returnCols <- c("weighted_avg_word_price")
+  
+  if (trainOrApply=='T') {
+    #return <- train[,returnCols,with=FALSE]
+    return <- train
+    # This is apply
+  } else {
+    #return <- test[,returnCols,with=FALSE]
+    return <- test
+  }
+  
+  if (eliminateOrigColumns==FALSE)
+    returnCols <- colnames(train)
+  #returnCols <- setdiff(colnames(return),c(category_vector))
+  #return[[colMeanResponseName]] <- ifelse(is.na(return[[colMeanResponseName]]),mean_y, return[[colMeanResponseName]])
+  return <- return[,returnCols,with=FALSE]
+  return
+} # end of get_nway_interaction
+
+
