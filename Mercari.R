@@ -52,15 +52,12 @@ for (cats in 1:length(cat_vector_list)) {
   train <- cbind(train,train_add)
 }
 
-name_words <- train_test[,c("id","name","price"),with=FALSE] %>% 
-  unnest_tokens(word,name)
-agg <- name_words[!name_words$price == (-1),j=list(mean_price=mean(price,na.rm=TRUE),
-                                                   Count=length(price)),by=c("word")]
+train_add <- get_text_feature(train=train,test=0,trainOrApply = 'T',folds=folds,
+                              eliminateOrigColumns = TRUE)
+train <- cbind(train, train_add)
 
-
-mean(name_words$price[name_words$word == 'girl' & !name_words$price== (-1)])
-
-
+feature_names <- union(feature_name, c("weighted_avg_word_price"))
+                       
 # Now light gbm
 params = list(num_leaves=31,min_data_in_leaf=50,
               learning_rate=0.1,feature_fraction=0.8,bagging_fraction=0.8,
