@@ -109,7 +109,7 @@ get_text_feature <- function(train, test=NULL,
     if (trainOrApply=='T')  {
       name_words_out_of_sample <- words_agg[name_words_out_of_sample,list(id,word,mean_price,Count)]
       name_words_out_of_sample$weight <- exp(name_words_out_of_sample$Count * -0.0001)
-      name_words_out_of_sample$weight <- ifelse(name_words_out_of_sample$Count < 10, 0, name_words_out_of_sample$weight)
+      name_words_out_of_sample$weight <- ifelse(name_words_out_of_sample$Count < 5, 0, name_words_out_of_sample$weight)
       name_words_agg <- name_words_out_of_sample[,j=list(weighted_avg_price=weighted.mean(mean_price,weight,na.rm=TRUE)),
                                                          by=c("id")]
 
